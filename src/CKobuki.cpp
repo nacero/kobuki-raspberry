@@ -1,6 +1,8 @@
 ﻿#include "CKobuki.h"
 #include "termios.h"
 #include "errno.h"
+#include <cstddef>
+
 
 // obsluha tty pod unixom
 int set_interface_attribs2 (int fd, int speed, int parity)
@@ -129,6 +131,7 @@ unsigned char * CKobuki::readKobukiMessage()
 	unsigned char buffer[1];
 	uint32_t Pocet;
 	buffer[0] = 0;
+	unsigned char * null_buffer(0);
 	//citame kym nezachytime zaciatok spravy
 	do {
 		Pocet=read(HCom,buffer,1);
@@ -169,7 +172,7 @@ unsigned char * CKobuki::readKobukiMessage()
 		}
 	}
 
-	return nullptr;
+	return null_buffer;
 }
 
 int CKobuki::checkChecksum(unsigned char * data)

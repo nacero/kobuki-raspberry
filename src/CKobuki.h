@@ -20,7 +20,7 @@
 #include "fcntl.h"
 #include "string.h"
 #include <math.h>
-
+#include <stdint.h>
 
 typedef struct
 {

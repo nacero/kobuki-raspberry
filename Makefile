@@ -1,7 +1,7 @@
 ifeq ($(OS),Darwin)
 CC=g++
 else
-CC=g++-4.9
+CC=g++
 endif
 
 OS := $(shell uname)
@@ -14,7 +14,7 @@ CPP_FILES = $(wildcard $(SRC_DIR)/*.cpp)
 #CPP_FILES += $(wildcard $(SRC_DIR)/display/*.cpp)
 OBJ_FILES := $(addprefix build/obj/,$(notdir $(CPP_FILES:.cpp=.o)))
 #LD_FLAGS :=  -lboost_system -lboost_filesystem -lpthread  -lpcap -lserial
-#CC_FLAGS := -std=c++11 -Wall 
+#LC_FLAGS := -std=c++11 -Wall 
 
 ifneq ($(OS),Darwin)
 #LD_FLAGS += -lgoldeloxSerial -lboost_thread
