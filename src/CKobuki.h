@@ -21,6 +21,7 @@
 #include "string.h"
 #include <math.h>
 #include <stdint.h>
+#include <iostream>
 
 typedef struct
 {
@@ -111,12 +112,12 @@ class CKobuki
 {
 public:
 	CKobuki() { stopVlakno = 0; };
-	// virtual ~CKobuki() { 
-	// 	stopVlakno = 1; 
-	// 	// CloseHandle(hCom); 
-	// 	::TerminateThread(threadHandle, -1); 
-	// 	WaitForSingleObject(threadHandle, INFINITE); 
-	// };
+	 virtual ~CKobuki() { 
+		stopVlakno = 1; 
+	 	close(HCom);
+		pthread_cancel(threadHandle); 
+	 	//WaitForSingleObject(threadHandle, INFINITE); 
+	};
 	
 	void enableCommands(bool commands) {
 		enabledCommands = commands;
@@ -128,6 +129,7 @@ public:
 	void setRotationSpeed(double radpersec);
 	void setArcSpeed(int mmpersec,int radius);
 	void setSound(int noteinHz, int duration);
+	void setPower(int value);
 private:
 	int HCom;
 	pthread_t threadHandle; // handle na vlakno
@@ -143,11 +145,12 @@ private:
 	int checkChecksum(unsigned char *data);
 	
 	//--spustenie merania v novom vlakne (vycitavanie bezi v novom vlakne. treba ho stopnut ak chceme poslat request)
-	static void *KobukiProcess(void *param)
+	static void * KobukiProcess(void *param)
 	{
+		//std::cout << "Nase vlakno Kobuki process nastartovalo" << std::endl;
 		CKobuki *hoku = (CKobuki*)param;
 		int vystup = hoku->measure();
-
+		
 		return param;
 	}
 

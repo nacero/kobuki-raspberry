@@ -13,7 +13,7 @@ CPP_FILES = $(wildcard $(SRC_DIR)/*.cpp)
 #CPP_FILES += $(wildcard $(SRC_DIR)/gpio/*.cpp)
 #CPP_FILES += $(wildcard $(SRC_DIR)/display/*.cpp)
 OBJ_FILES := $(addprefix build/obj/,$(notdir $(CPP_FILES:.cpp=.o)))
-#LD_FLAGS :=  -lboost_system -lboost_filesystem -lpthread  -lpcap -lserial
+LD_FLAGS :=  -lpthread
 #LC_FLAGS := -std=c++11 -Wall 
 
 ifneq ($(OS),Darwin)

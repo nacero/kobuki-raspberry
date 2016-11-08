@@ -1,8 +1,8 @@
-﻿#include "CKobuki.h"
+#include "CKobuki.h"
 #include "termios.h"
 #include "errno.h"
 #include <cstddef>
-
+#include <iostream>
 
 // obsluha tty pod unixom
 int set_interface_attribs2 (int fd, int speed, int parity)
@@ -21,14 +21,14 @@ int set_interface_attribs2 (int fd, int speed, int parity)
         tty.c_cflag = (tty.c_cflag & ~CSIZE) | CS8;     // 8-bit chars
         // disable IGNBRK for mismatched speed tests; otherwise receive break
         // as \000 chars
-        tty.c_iflag &= ~IGNBRK;         // disable break processing
+        //tty.c_iflag &= ~IGNBRK;         // disable break processing
         tty.c_lflag = 0;                // no signaling chars, no echo,
                                         // no canonical processing
         tty.c_oflag = 0;                // no remapping, no delays
         tty.c_cc[VMIN]  = 0;            // read doesn't block
         tty.c_cc[VTIME] = 5;            // 0.5 seconds read timeout
 
-        tty.c_iflag &= ~(IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
+        tty.c_iflag &= ~(IGNBRK | INLCR | ICRNL | IXON | IXOFF | IXANY); // shut off xon/xoff ctrl
 
         tty.c_cflag |= (CLOCAL | CREAD);// ignore modem controls,
                                         // enable reading
@@ -76,17 +76,18 @@ int CKobuki::connect(char * comportT)
         printf("Kobuki nepripojeny\n");
         //  m_status="Chyba:  Port sa neda otvorit.";
         // potom nasleduje    Closeint(hCom);  a potom asi exit...
+
         return HCom;
 
     }
     else
     {
-        set_interface_attribs2 (HCom, B57600, 0);  // set speed to 115,200 bps, 8n1 (no parity)
+        set_interface_attribs2 (HCom, B115200, 0);  // set speed to 115,200 bps, 8n1 (no parity)
         set_blocking2 (HCom, 0);                // set no blocking
       /*  struct termios settings;
         tcgetattr(HCom, &settings);
 
-        cfsetospeed(&settings, B57600); // baud rate
+        cfsetospeed(&settings, B115200); // baud rate
         settings.c_cflag &= ~PARENB; // no parity
         settings.c_cflag &= ~CSTOPB; // 1 stop bit
         settings.c_cflag &= ~CSIZE;
@@ -129,44 +130,58 @@ int CKobuki::connect(char * comportT)
 unsigned char * CKobuki::readKobukiMessage()
 {
 	unsigned char buffer[1];
-	uint32_t Pocet;
+	ssize_t Pocet;
 	buffer[0] = 0;
 	unsigned char * null_buffer(0);
 	//citame kym nezachytime zaciatok spravy
 	do {
 		Pocet=read(HCom,buffer,1);
-		// ReadFile(hCom, buffer, 1, &Pocet, NULL);
 	} while (buffer[0] != 0xAA);
 	//mame zaciatok spravy (asi)
 	if (Pocet == 1 && buffer[0] == 0xAA)
 	{
 		//citame dalsi byte
 		do {
+
 			Pocet=read(HCom,buffer,1);
-			// ReadFile(hCom, buffer, 1, &Pocet, NULL);
-		} while (Pocet == 0);
+
+		} while (Pocet != 1); // na linuxe -1 na windowse 0
+
+
+	
 		//a ak je to druhy byte hlavicky
 		if (Pocet == 1 && buffer[0] == 0x55)
 		{
 			// precitame dlzku
 			Pocet=read(HCom,buffer,1);
+
+
+
 			// ReadFile(hCom, buffer, 1, &Pocet, NULL);
 			if (Pocet == 1)
 			{			
 				//mame dlzku.. nastavime vektor a precitame ho cely
 				int readLenght = buffer[0];
-				unsigned char *outputBuffer = (unsigned char*)calloc(readLenght+2,sizeof(char));
+				unsigned char *outputBuffer = (unsigned char*)calloc(readLenght+4,sizeof(char));
 				outputBuffer[0] = buffer[0];
 				int pct = 0;
 				
 				do
 				{
 					Pocet = 0;
-					int readpoc = (readLenght + 1 - pct);
+					int readpoc = (readLenght+1  - pct);
+//printf("chcem precitat %i",readpoc);
 					Pocet=read(HCom,outputBuffer+1+pct,readpoc);
 					// ReadFile(hCom, outputBuffer+1+pct, readpoc, &Pocet, NULL);
-					pct = pct + Pocet;
-				} while (pct != (readLenght + 1));
+				
+	pct = pct + (Pocet == -1 ? 0 : Pocet);
+//printf(" precital %i a celkovo %i\n",Pocet,pct);
+				} while (pct != (readLenght+1 ));
+
+for(int i=0;i<outputBuffer[0]+2;i++)
+{
+printf("%x ",outputBuffer[i]);
+}
 				return outputBuffer;
 			}
 		}
@@ -187,6 +202,9 @@ int CKobuki::checkChecksum(unsigned char * data)
 
 void CKobuki::setLed(int led1, int led2)
 {
+
+	//char message[8] = {0xaa,0x55,0x04,0x0C,0x02,0x0040 %256, 0x0040 >>8, 0x1F};
+		
 	char message[8] = {0xaa,0x55,0x04,0x0c,0x02,0x00,(led1+led2*4)%256,0x00};
 	message[7] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6];
 	uint32_t pocet;
@@ -194,24 +212,36 @@ void CKobuki::setLed(int led1, int led2)
 	// WriteFile(hCom, message, 8, &pocet, NULL);
 }
 
+
+void CKobuki::setPower(int value){
+	if (value == 1) {
+		char message[8] = {0xaa,0x55,0x04,0x0C,0x02,0xf0,0x00,0xAF};
+		uint32_t pocet;
+		pocet = write(HCom,&message,8);
+	}
+
+}
+
+
 void CKobuki::setTranslationSpeed(int mmpersec)
 {
-	char message[10] = { 0xaa,0x55,0x06,0x01,0x04,mmpersec%256,mmpersec>>8,0x00,0x00,  0x00 };
-	message[9] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8];
+	char message[14] = { 0xaa,0x55,0x0A,0x0c,0x02,0xf0,0x00,0x01,0x04,mmpersec%256,mmpersec>>8,0x00,0x00,  0x00 };
+	message[13] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8] ^ message[9] ^ message[10] ^ message[11] ^ message[12];
 	
 	uint32_t pocet;
-	pocet=write(HCom,&message,10);
-	// WriteFile(hCom, message, 10, &pocet, NULL);
+	pocet=write(HCom,&message,14);
+	// WriteFile(hCom, message, 14, &pocet, NULL);
 }
 
 void CKobuki::setRotationSpeed(double radpersec)
 {
-	int speedvalue = floor(radpersec * 230.0 / 2.0  +0.5);
-	char message[10] = { 0xaa,0x55,0x06,0x01,0x04,speedvalue % 256,speedvalue >>8,0x01,0x00,  0x00 };
-	message[9] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8];
+	int speedvalue = radpersec * 230.0f / 2.0f;
+	char message[14] = { 0xaa,0x55,0x0A,0x0c,0x02,0xf0,0x00,0x01,0x04,speedvalue % 256,speedvalue >>8,0x01,0x00,  0x00 };
+	message[13] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8] ^ message[9] ^ message[10] ^ message[11] ^ message[12];
+
 	uint32_t pocet;
-	pocet=write(HCom,&message,10);
-	// WriteFile(hCom, message, 10, &pocet, NULL);
+	pocet=write(HCom,&message,14);
+	// WriteFile(hCom, message, 14, &pocet, NULL);
 }
 
 void CKobuki::setArcSpeed(int mmpersec, int radius)
@@ -245,22 +275,17 @@ void CKobuki::startCommunication(char * portname, bool CommandsEnabled, src_call
 	enableCommands(CommandsEnabled);
 	callbackFunction = userCallback;
 	userData = userDataL;
-	// threadHandle = CreateThread(NULL, 0, KobukiProcess, (void *)this, 0, &threadID);
 
-
-
-    threadID = pthread_create(&threadHandle,NULL,&KobukiProcess,(void*)this);
+    	int pthread_result;
+	pthread_result = pthread_create(&threadHandle,NULL,KobukiProcess,(void *)this);
 
 }
 
 
 int CKobuki::measure()
 {
-
 	while (stopVlakno==0)
 	{
-		
-		
 		unsigned char *message = readKobukiMessage();
 		if (message == NULL)
 		{
@@ -269,6 +294,8 @@ int CKobuki::measure()
 		}
 		int ok=parseKobukiMessage(data,message);
 		
+	//std::cout << "Parse vratil:" << ok << std::endl;
+
 		//maximalne moze trvat callback funkcia 20 ms, ak by trvala viac, nestihame citat
 	
 		if (ok == 0 && callbackFunction!=NULL)
@@ -285,7 +312,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 	int rtrnvalue = checkChecksum(data);
 	//ak je zly checksum,tak kaslat na to
 	if (rtrnvalue != 0)
-		return -1;
+		return -2;
 
 	int checkedValue = 1;
 	//kym neprejdeme celu dlzku
@@ -332,7 +359,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x03)
-				return -1;
+				return -3;
 			checkedValue++;
 			output.IRSensorRight = data[checkedValue];
 			checkedValue++;
@@ -345,7 +372,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x07)
-				return -1;
+				return -4;
 			checkedValue++;
 			output.GyroAngle = data[checkedValue + 1] * 256 + data[checkedValue];
 			checkedValue += 2;
@@ -356,7 +383,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x06)
-				return -1;
+				return -5;
 			checkedValue++;
 			output.CliffSensorRight = data[checkedValue + 1] * 256 + data[checkedValue];
 			checkedValue += 2;
@@ -369,7 +396,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x02)
-				return -1;
+				return -6;
 			checkedValue++;
 			output.wheelCurrentLeft =  data[checkedValue];
 			checkedValue ++;
@@ -381,7 +408,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x04)
-				return -1;
+				return -7;
 			checkedValue++;
 			output.extraInfo.HardwareVersionPatch = data[checkedValue];
 			checkedValue++;
@@ -395,7 +422,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x04)
-				return -1;
+				return -8;
 			checkedValue++;
 			output.extraInfo.FirmwareVersionPatch = data[checkedValue];
 			checkedValue++;
@@ -409,7 +436,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue]%2 !=0)
-				return -1;
+				return -9;
 			checkedValue++;
 			output.frameId = data[checkedValue];
 			checkedValue++;
@@ -433,7 +460,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x10)
-				return -1;
+				return -10;
 			checkedValue++;
 			output.digitalInput = data[checkedValue + 1] * 256 + data[checkedValue];
 			checkedValue += 2;
@@ -452,7 +479,7 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 		{
 			checkedValue++;
 			if (data[checkedValue] != 0x0C)
-				return -1;
+				return -11;
 			checkedValue++;
 			output.extraInfo.UDID0 = data[checkedValue + 3] * 256*256*256+ data[checkedValue + 2] * 256*256+ data[checkedValue + 1] * 256 + data[checkedValue];
 			checkedValue += 4;
