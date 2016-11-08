@@ -43,7 +43,6 @@ int main() {
 		std::cout << "otoceu som sa " << i << "-ty raz"  << std::endl;
 	}
 
-
 	robot.setTranslationSpeed(0);
 	std::cout << "kokoty za tri kompoty" << std::endl;
 

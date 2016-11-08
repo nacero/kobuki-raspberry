@@ -74,9 +74,6 @@ int CKobuki::connect(char * comportT)
     if ( HCom== -1 )
     {
         printf("Kobuki nepripojeny\n");
-        //  m_status="Chyba:  Port sa neda otvorit.";
-        // potom nasleduje    Closeint(hCom);  a potom asi exit...
-
         return HCom;
 
     }
@@ -100,29 +97,7 @@ int CKobuki::connect(char * comportT)
         tcflush(HCom, TCOFLUSH);
 
 
-    /*	DCB PortDCB;
-        PortDCB.DCBlength = sizeof(DCB);  // Inicializuj položku DCBlength
-        GetCommState(HCom,&PortDCB);       // Naèítaj aktuálne nastavenia
-        PortDCB.BaudRate=57600;
-        PortDCB.ByteSize=8;
-        PortDCB.Parity=0;
-        SetCommState(HCom,&PortDCB);
-        PurgeComm(HCom,PURGE_TXCLEAR | PURGE_RXCLEAR);
-        COMMTIMEOUTS timeouts;
-
-        timeouts.ReadIntervalTimeout         = MAXDWORD;
-        timeouts.ReadTotalTimeoutMultiplier  = 0;
-        timeouts.ReadTotalTimeoutConstant    = 0;
-        timeouts.WriteTotalTimeoutMultiplier = 0;
-        timeouts.ReadTotalTimeoutConstant    = 0;
-
-        SetCommTimeouts(HCom,&timeouts);*/
         printf("Kobuki pripojeny\n");
-         // usleep(100*1000);
-        // SentToCreate(OI_START);
-         // usleep(100*1000);
-         // SentToCreate(OI_FULL);
-         // usleep(100*1000);
         return HCom;
     }
 }
@@ -155,8 +130,6 @@ unsigned char * CKobuki::readKobukiMessage()
 			// precitame dlzku
 			Pocet=read(HCom,buffer,1);
 
-
-
 			// ReadFile(hCom, buffer, 1, &Pocet, NULL);
 			if (Pocet == 1)
 			{			
@@ -170,18 +143,17 @@ unsigned char * CKobuki::readKobukiMessage()
 				{
 					Pocet = 0;
 					int readpoc = (readLenght+1  - pct);
-//printf("chcem precitat %i",readpoc);
 					Pocet=read(HCom,outputBuffer+1+pct,readpoc);
-					// ReadFile(hCom, outputBuffer+1+pct, readpoc, &Pocet, NULL);
 				
-	pct = pct + (Pocet == -1 ? 0 : Pocet);
-//printf(" precital %i a celkovo %i\n",Pocet,pct);
+					pct = pct + (Pocet == -1 ? 0 : Pocet);
 				} while (pct != (readLenght+1 ));
 
-for(int i=0;i<outputBuffer[0]+2;i++)
-{
-printf("%x ",outputBuffer[i]);
-}
+				// tu si mozeme ceknut co chodi zo serial intefejsu Kobukiho
+				// for(int i=0;i<outputBuffer[0]+2;i++)
+				// {
+				// 	printf("%x ",outputBuffer[i]);
+				// }
+
 				return outputBuffer;
 			}
 		}
@@ -201,25 +173,20 @@ int CKobuki::checkChecksum(unsigned char * data)
 }
 
 void CKobuki::setLed(int led1, int led2)
-{
-
-	//char message[8] = {0xaa,0x55,0x04,0x0C,0x02,0x0040 %256, 0x0040 >>8, 0x1F};
-		
+{		
 	char message[8] = {0xaa,0x55,0x04,0x0c,0x02,0x00,(led1+led2*4)%256,0x00};
 	message[7] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6];
 	uint32_t pocet;
 	pocet=write(HCom,&message,8);
-	// WriteFile(hCom, message, 8, &pocet, NULL);
 }
 
-
+// tato funkcia nema moc sama o sebe vyznam, payload o tom, ze maju byt externe napajania aktivne musi byt aj tak v kazdej sprave...
 void CKobuki::setPower(int value){
 	if (value == 1) {
 		char message[8] = {0xaa,0x55,0x04,0x0C,0x02,0xf0,0x00,0xAF};
 		uint32_t pocet;
 		pocet = write(HCom,&message,8);
 	}
-
 }
 
 
@@ -230,7 +197,6 @@ void CKobuki::setTranslationSpeed(int mmpersec)
 	
 	uint32_t pocet;
 	pocet=write(HCom,&message,14);
-	// WriteFile(hCom, message, 14, &pocet, NULL);
 }
 
 void CKobuki::setRotationSpeed(double radpersec)
@@ -241,7 +207,6 @@ void CKobuki::setRotationSpeed(double radpersec)
 
 	uint32_t pocet;
 	pocet=write(HCom,&message,14);
-	// WriteFile(hCom, message, 14, &pocet, NULL);
 }
 
 void CKobuki::setArcSpeed(int mmpersec, int radius)
@@ -251,7 +216,6 @@ void CKobuki::setArcSpeed(int mmpersec, int radius)
 	message[9] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8];
 	uint32_t pocet;
 	pocet=write(HCom,&message,10);
-	// WriteFile(hCom, message, 10, &pocet, NULL);
 }
 
 void CKobuki::setSound(int noteinHz, int duration)
@@ -259,11 +223,9 @@ void CKobuki::setSound(int noteinHz, int duration)
 	int notevalue = floor((double)1.0 / ((double)noteinHz*0.00000275) + 0.5);
 	char message[9] = { 0xaa,0x55,0x05,0x03,0x03,notevalue%256,notevalue>>8,duration%256,0x00 };
 	message[8] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7];
-	//char message[] = { 0xaa,0x55,0x19,0x03,0x03,notevalue % 256,notevalue / 256,duration % 256,0x03,0x03,(notevalue+5) % 256,(notevalue+5) / 256,duration % 256,0x03,0x03,(notevalue + 10) % 256,(notevalue + 10) / 256,duration % 256,0x03,0x03,(notevalue + 15) % 256,(notevalue +15) / 256,duration % 256,0x03,0x03,(notevalue + 20) % 256,(notevalue + 20) / 256,duration % 256,0x00 };
 
 	uint32_t pocet;
 	pocet=write(HCom,&message,28);
-	// WriteFile(hCom, message, 28, &pocet, NULL);
 }
 
 
@@ -276,9 +238,8 @@ void CKobuki::startCommunication(char * portname, bool CommandsEnabled, src_call
 	callbackFunction = userCallback;
 	userData = userDataL;
 
-    	int pthread_result;
+    int pthread_result;
 	pthread_result = pthread_create(&threadHandle,NULL,KobukiProcess,(void *)this);
-
 }
 
 
@@ -293,11 +254,8 @@ int CKobuki::measure()
 			continue;
 		}
 		int ok=parseKobukiMessage(data,message);
-		
-	//std::cout << "Parse vratil:" << ok << std::endl;
 
 		//maximalne moze trvat callback funkcia 20 ms, ak by trvala viac, nestihame citat
-	
 		if (ok == 0 && callbackFunction!=NULL)
 		{
 			callbackFunction(userData, data);
@@ -487,8 +445,6 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 			checkedValue += 4;
 			output.extraInfo.UDID2 = data[checkedValue + 3] * 256 * 256 * 256 + data[checkedValue + 2] * 256 * 256 +data[checkedValue + 1] * 256 + data[checkedValue];
 			checkedValue += 4;
-
-
 		}
 		else
 		{
