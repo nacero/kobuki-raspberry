@@ -212,10 +212,10 @@ void CKobuki::setRotationSpeed(double radpersec)
 void CKobuki::setArcSpeed(int mmpersec, int radius)
 {
 	int speedvalue = mmpersec * ((radius + (radius>0? 230:-230) )/ 2 ) / radius;
-	char message[10] = { 0xaa,0x55,0x06,0x01,0x04,speedvalue % 256,speedvalue >>8,radius % 256,radius >>8,  0x00 };
-	message[9] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8];
+	char message[14] = { 0xaa,0x55,0x0A,0x0c,0x02,0xf0,0x00,0x01,0x04,speedvalue % 256,speedvalue >>8,radius % 256,radius >>8,  0x00 };
+	message[13] = message[2] ^ message[3] ^ message[4] ^ message[5] ^ message[6] ^ message[7] ^ message[8] ^ message[9] ^ message[10] ^ message[11] ^ message[12];
 	uint32_t pocet;
-	pocet=write(HCom,&message,10);
+	pocet=write(HCom,&message,14);
 }
 
 void CKobuki::setSound(int noteinHz, int duration)
