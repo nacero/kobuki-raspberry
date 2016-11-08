@@ -23,18 +23,18 @@ int main() {
 	usleep(1*1000*1000);
 	robot.setRotationSpeed(3.14159/4.0);
 	usleep(2*1000*1000);
-        robot.setTranslationSpeed(100);
-        usleep(1*1000*1000);
-        robot.setRotationSpeed(3.14159/4.0);
-        usleep(2*1000*1000);
-        robot.setTranslationSpeed(100);
-        usleep(1*1000*1000);
-        robot.setRotationSpeed(3.14159/4.0);
-        usleep(2*1000*1000);
-        robot.setTranslationSpeed(100);
-        usleep(1*1000*1000);
-        robot.setRotationSpeed(3.14159/4.0);
-        usleep(2*1000*1000);
+    robot.setTranslationSpeed(100);
+    usleep(1*1000*1000);
+    robot.setRotationSpeed(3.14159/4.0);
+    usleep(2*1000*1000);
+    robot.setTranslationSpeed(100);
+    usleep(1*1000*1000);
+    robot.setRotationSpeed(3.14159/4.0);
+    usleep(2*1000*1000);
+    robot.setTranslationSpeed(100);
+    usleep(1*1000*1000);
+    robot.setRotationSpeed(3.14159/4.0);
+    usleep(2*1000*1000);
 	*/
 
 	for (int i = 0; i < 16; i++) {

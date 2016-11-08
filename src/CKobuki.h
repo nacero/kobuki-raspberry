@@ -116,7 +116,6 @@ public:
 		stopVlakno = 1; 
 	 	close(HCom);
 		pthread_cancel(threadHandle); 
-	 	exit();
 	};
 	
 	void enableCommands(bool commands) {
