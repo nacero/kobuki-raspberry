@@ -83,7 +83,7 @@ typedef struct
 	unsigned char IRSensorCenter;
 	unsigned char IRSensorLeft;
 	//---Inertial Sensor Data
-	unsigned short GyroAngle;
+	signed short GyroAngle;
 	unsigned short GyroAngleRate;
 	//---Cliff Sensor Data
 	unsigned short CliffSensorRight;
