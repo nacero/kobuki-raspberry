@@ -197,6 +197,8 @@ void CKobuki::setTranslationSpeed(int mmpersec)
 	
 	uint32_t pocet;
 	pocet=write(HCom,&message,14);
+
+	std::cout << "pocet zpaisanych bajtov: " << pocet << std::endl;
 }
 
 void CKobuki::setRotationSpeed(double radpersec)
