@@ -24,12 +24,11 @@ void rotateByTheta(CKobuki &robot, long double th);
 
 long demoCallback(void *user_data, TKobukiData &Kobuki_data) {
 
-	std::cout << "callback!" << std::endl;
-	/*std::cout << "Encoder left: " << Kobuki_data.EncoderLeft << std::endl
-	<< "Encoder right: " << Kobuki_data.EncoderRight << std::endl
-	<< "Direction left: " << directionL << std::endl
-	<< "Direction right: " << directionR << std::endl;
-	*/
+	//std::cout << "callback!" << std::endl;
+	std::cout <<  Kobuki_data.EncoderLeft << " " << Kobuki_data.EncoderRight << " " << Kobuki_data.EncoderLeft - Kobuki_data.EncoderRight << " " << theta<< std::endl;
+	//<< "Direction left: " << directionL << std::endl
+	//<< "Direction right: " << directionR << std::endl;
+	
 	if (iterationCount == 0) {
 		prevLeftEncoder = Kobuki_data.EncoderLeft;
                 prevRightEncoder = Kobuki_data.EncoderRight;
@@ -103,12 +102,13 @@ long demoCallback(void *user_data, TKobukiData &Kobuki_data) {
 
 // in meters
 void goStraight(CKobuki &robot, long double distance){
-	long double u = 0; // riadena velicina, rychlost robota pri pohybe
-	long double w = distance; // pozadovana hodnota
-	long double yy = 0;
-	long double Kp = 1600; 
-	long double e = 0;	
-	int thresh = 500;
+	long double u_translation = 0; // riadena velicina, rychlost robota pri pohybe
+	long double w_translation = distance; // pozadovana hodnota
+	long double Kp_translation = 1600; 
+	long double e_translation = 0;	
+	int upper_thresh_translation = 500;
+	int lower_thresh_translation = 40;
+	int translation_start_gain = 20;
 
 	x = 0;
 	y = 0;
@@ -116,20 +116,26 @@ void goStraight(CKobuki &robot, long double distance){
 
 	long i = 1;
 
-	while (fabs(x - w) > 0.005 && x<w) {
-		e = w - x;
-		u = Kp*e;
+	while (fabs(x - w_translation) > 0.005 && x<w_translation) {
+		e_translation = w_translation - x;
+		u_translation = Kp_translation * e_translation;
 
-		if (u > thresh) u = thresh;
-		if (u < 40) u = 40;
-
-		if (i < u) {
-			u = i;
+		// limit translation speed
+		if (u_translation > upper_thresh_translation) 
+			u_translation = upper_thresh_translation;
+		if (u_translation < lower_thresh_translation) 
+			u_translation = lower_thresh_translation;
+		
+		// rewrite starting speed with line
+		if (i < u_translation) {
+			u_translation = i;
 		}
 
-		robot.setTranslationSpeed(u);
+		robot.setTranslationSpeed(u_translation);
+		
 		usleep(25*1000);
-		i = i + 20;
+		// increment starting speed
+		i = i + translation_start_gain;
 	}		
 	robot.setTranslationSpeed(0);
 }
@@ -167,29 +173,57 @@ void doRotation(CKobuki &robot, long double th) {
         long double w = th; // pozadovana hodnota v uhloch
         long double Kp = PI/4;
         long double e = 0;
-        int thresh = 2*PI;
+        int thresh = PI;
 
         theta = 0;
+	x = 0;
+	y = 0;
 
-        long i = 0;
+        long double i = 0;
 
-        while (fabs(theta - w) > 0.00001 && theta < w) {
-		std::cout << "pozadovana: " << th << "aktualna: " << theta << std::endl;
-                e = w - theta;
-                u = Kp*e;
+	if (th > 0) {
+		while (theta < w) {
+		//	std::cout << "pozadovana: " << th << "aktualna: " << theta << std::endl;
+			e = w - theta;
+			u = Kp*e;
 
-                if (u > thresh) u = thresh;
-                if (u < 0.3) u = 0.3;
+			if (u > thresh) u = thresh;
+			if (u < 0.3) u = 0.3;
 
-                if (i < u) {
-                        u = i;
-                }
+			if (i < u) {
+				u = i;
+			}
 
-                robot.setRotationSpeed(u);
-                usleep(25*1000);
-                i = i + 0.001;
-        }
-        robot.setRotationSpeed(0);
+			std::cout << "Theta: " << theta << std::endl;
+
+			robot.setRotationSpeed(u);
+			usleep(25*1000);
+			i = i + 0.1;
+		}
+	} 
+	else {
+		while (theta > w) {
+		//      std::cout << "pozadovana: " << th << "aktualna: " << theta << std::endl;
+			e = w - theta;
+			u = Kp*e;
+
+			if (u < -1*thresh) u = thresh*-1;
+			if (u > -1*0.3) u = -1*0.3;
+
+			if (i > u) {
+				u = i;
+			}
+
+			std::cout << "Theta: " << theta << std::endl;
+
+			robot.setRotationSpeed(u);
+			usleep(25*1000);
+			i = i - 0.1;
+		}
+
+
+	}
+	robot.setRotationSpeed(0);
 }
 
 
@@ -224,10 +258,14 @@ int main() {
 	unsigned char * null_ptr(0);
 	CKobuki robot;
 
-	//robot.setLed(1,1);
+	robot.startCommunication("/dev/ttyUSB0", true, &demoCallback, null_ptr);
+
+	robot.setLed(1,1);
 
 	// positive = FORWARD, negative = BACKWARD, max = 700
-	
+
+
+
 /*	int speed = 20;
 	while (fabs(x) < 1 ||  fabs(y) < 1) {
 		robot.setArcSpeed(speed, 1200);
@@ -240,17 +278,21 @@ int main() {
 	
 	robot.setTranslationSpeed(0);
 */
-	std::cout << "robot?" << std::endl;
 
-	robot.setTranslationSpeed(300);
-
-
-
-	usleep(10*1000*1000);
 
 	//goStraight(robot,0.2);
 
-//	doRotation(robot, PI/2);
+
+	// CCW ked je kladne
+	goStraight(robot,1);
+	//doRotation(robot,-PI/2);
+	//goStraight(robot,1);
+	//doRotation(robot,-PI/2);
+	//goStraight(robot,1);
+	//doRotation(robot,-PI/2);
+	//goStraight(robot,1);
+	//doRotation(robot,-PI/2);
+
 
 //	rotateByTheta(robot, 2*-PI);
 //	goToXy(robot,1,0);
