@@ -400,14 +400,14 @@ int main() {
 
 
 	// CCW ked je zaporne
-	goStraight(robot,3);
-	doGyroRotation(robot,-PI/2);
-	goStraight(robot,3);
-	doGyroRotation(robot,-PI/2);
-	goStraight(robot,3);
-	doGyroRotation(robot,-PI/2);
-	goStraight(robot,3);
-	doGyroRotation(robot,-PI/2);
+	//goStraight(robot,1);
+	doGyroRotation(robot,PI);
+	goStraight(robot,1);
+	//doGyroRotation(robot,-PI/2);
+	//goStraight(robot,1);
+	//doGyroRotation(robot,-PI/2);
+	//goStraight(robot,1);
+	//doGyroRotation(robot,-PI/2);
 
 
 //	rotateByTheta(robot, 2*-PI);
