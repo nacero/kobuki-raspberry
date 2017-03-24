@@ -1,16 +1,18 @@
 //#pragma once
 ////*************************************************************************************
 ////*************************************************************************************
-//// autor Martin Dekan  mail: dekdekan@gmail.com
+//// autor Martin Dekan  a Peter Beno mail: dekdekan@gmail.com, peter.beno@stuba.sk
 ////-------------------------------------------------------------------------------------
 //// co to je:
 //// trieda na pracu s robotom kobuki. mala by mat implementovane citanie dat
 //// a posielanie prikazov...
 //// neobsahuje ziadnu logiku co s datami robit, to je na userovi aby spravil v callback funkcii
+//  jedna sa vlastne len o implementaciu komunikacie s hardwareom, driver
 ////*************************************************************************************
 ////*************************************************************************************
 #ifndef KOBUKI_CLASS_123456789
 #define KOBUKI_CLASS_123456789
+#define PI          3.141592653589793238462643383279502884L /* pi */
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -121,7 +123,11 @@ public:
 	void enableCommands(bool commands) {
 		enabledCommands = commands;
 	};
-	void startCommunication(char *portname,bool CommandsEnabled,src_callback_kobuki_data userCallback,void *userDataL);
+
+
+	long loop(void *user_data, TKobukiData &Kobuki_data);
+
+	void startCommunication(char *portname,bool CommandsEnabled,void *userDataL);
 	int measure(); //vlaknova funkcia, ma v sebe nekonecne vlakno a vycitava udaje
 	void setLed(int led1 = 0, int led2 = 0); //led1 zelena/cervena 2/1, //led2 zelena/cervena 2/1
 	void setTranslationSpeed(int mmpersec);
@@ -129,6 +135,14 @@ public:
 	void setArcSpeed(int mmpersec,int radius);
 	void setSound(int noteinHz, int duration);
 	void setPower(int value);
+
+
+	// control functions 
+	void goStraight(long double distance);
+	void doRotation(long double th);
+	void goToXy(long double xx, long double yy);
+
+
 private:
 	int HCom;
 	pthread_t threadHandle; // handle na vlakno
@@ -153,6 +167,26 @@ private:
 		return param;
 	}
 
+
+	// internal variables for robot control
+	int prevLeftEncoder, prevRightEncoder; // [ticks]
+	uint16_t prevTimestamp;// [ms]
+	long totalLeft, totalRight = 0;
+	int directionL = 0; // 1 = forward, 0 = undefined, -1 = backwards
+	int directionR = 0;
+	int iterationCount = 0;
+	long double tickToMeter = 0.000085292090497737556558; // [m/tick]
+
+	long double x = 0; // [m]
+	long double y = 0;
+	long double theta = 0; // [rad]
+	long double b = 0.23;
+
+	long double prevGyroTheta = 0; 
+	long double gyroTheta = 0; // [rad]
+
+	// utilities
+	long double gyroToRad(signed short GyroAngle);
 
 };
 

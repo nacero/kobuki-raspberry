@@ -237,16 +237,18 @@ void CKobuki::setSound(int noteinHz, int duration)
 
 
 
-void CKobuki::startCommunication(char * portname, bool CommandsEnabled, src_callback_kobuki_data userCallback,  void *userDataL)
+void CKobuki::startCommunication(char * portname, bool CommandsEnabled,  void *userDataL)
 {
 	connect(portname);
 	enableCommands(CommandsEnabled);
-	callbackFunction = userCallback;
 	userData = userDataL;
 
     int pthread_result;
 	pthread_result = pthread_create(&threadHandle,NULL,KobukiProcess,(void *)this);
 }
+
+
+
 
 
 int CKobuki::measure()
@@ -262,9 +264,9 @@ int CKobuki::measure()
 		int ok=parseKobukiMessage(data,message);
 
 		//maximalne moze trvat callback funkcia 20 ms, ak by trvala viac, nestihame citat
-		if (ok == 0 && callbackFunction!=NULL)
+		if (ok == 0)
 		{
-			callbackFunction(userData, data);
+			loop(userData, data);
 		}
 		free(message);
 	}
@@ -460,3 +462,247 @@ int CKobuki::parseKobukiMessage(TKobukiData &output, unsigned char * data)
 	}
 	return 0;
 }
+
+
+
+
+
+
+
+long double CKobuki::gyroToRad(signed short GyroAngle) {
+	
+	long double ret;
+	if (GyroAngle < 0) {
+		ret = GyroAngle + 36000;
+	}
+	else {
+		ret = GyroAngle;	
+	}
+	return (long double) ret*PI/18000.0;
+}
+
+
+
+
+
+long CKobuki::loop(void *user_data, TKobukiData &Kobuki_data) {
+	if (iterationCount == 0) {
+		prevLeftEncoder = Kobuki_data.EncoderLeft;
+        prevRightEncoder = Kobuki_data.EncoderRight;
+		prevTimestamp = Kobuki_data.timestamp;
+		prevGyroTheta = gyroToRad(Kobuki_data.GyroAngle);
+		iterationCount++;
+	}
+	
+	int dLeft;
+	if (abs(Kobuki_data.EncoderLeft - prevLeftEncoder) > 32000) {
+		dLeft = Kobuki_data.EncoderLeft - prevLeftEncoder + (Kobuki_data.EncoderLeft > prevLeftEncoder ? -65536 : +65536);	
+	}
+	else {
+		dLeft = Kobuki_data.EncoderLeft - prevLeftEncoder;
+	}
+
+    int dRight;
+    if (abs(Kobuki_data.EncoderRight - prevRightEncoder) > 32000) {
+        dRight = Kobuki_data.EncoderRight - prevRightEncoder + (Kobuki_data.EncoderRight > prevRightEncoder ? -65536 : +65536);
+    }
+    else {
+        dRight = Kobuki_data.EncoderRight - prevRightEncoder;
+    }
+
+	long double dGyroTheta = prevGyroTheta - gyroToRad(Kobuki_data.GyroAngle);
+
+	if (dGyroTheta > PI) {
+		dGyroTheta -= 2*PI;
+	}
+	if (dGyroTheta < -1*PI) {
+		dGyroTheta += 2*PI;
+	}
+
+	gyroTheta += dGyroTheta;
+
+	uint16_t dTimestamp = Kobuki_data.timestamp - prevTimestamp; 
+
+	long double mLeft = dLeft*tickToMeter;
+	long double mRight = dRight*tickToMeter;
+
+	if (mLeft == mRight) {
+		x = x + mRight;
+	} else {
+		x = x + (b*(mRight+mLeft))/(2*(mRight-mLeft))*(sin((mRight-mLeft)/b + theta) - sin(theta));
+		y = y + (b*(mRight+mLeft))/(2*(mRight-mLeft))*(cos((mRight-mLeft)/b + theta) - cos(theta));
+		theta = (mRight-mLeft)/b + theta;
+	}
+
+	totalLeft +=dLeft;
+	totalRight +=dRight;
+
+	// ak je suma novej a predchadzajucej vacsia ako 65536 tak to pretieklo?
+	directionL = (prevLeftEncoder < Kobuki_data.EncoderLeft ? 1 : -1);
+	directionR = (prevRightEncoder < Kobuki_data.EncoderRight ? 1 : -1);
+	dTimestamp = (Kobuki_data.timestamp < prevTimestamp ? prevTimestamp - Kobuki_data.timestamp + 65536 : dTimestamp);
+	
+
+	prevLeftEncoder = Kobuki_data.EncoderLeft;
+	prevRightEncoder = Kobuki_data.EncoderRight;
+	prevTimestamp = Kobuki_data.timestamp;
+	prevGyroTheta = gyroToRad(Kobuki_data.GyroAngle);
+	
+
+	std::cout << "X: " << x << " Y: " << y << " Theta: " << theta << std::endl; 
+
+	return 0;
+}
+
+
+
+
+// povie kobukimu ze ma ist niekolko metrov dopredu alebo dozadu, rozhoduje znamienko
+// funkcia kompenzuje chodenie rovno pomocou regulatora, interne vyuziva setArcSpeed a 
+// ako spatnu vazbu pouziva data z enkoderov
+void CKobuki::goStraight(long double distance){
+	long double u_translation = 0; // riadena velicina, rychlost robota pri pohybe
+	long double w_translation = distance; // pozadovana hodnota
+	
+	// parametre regulatora
+	long double Kp_translation = 1600; 
+	long double e_translation = 0;	
+	int upper_thresh_translation = 500;
+	int lower_thresh_translation = 40;
+	int translation_start_gain = 20;
+
+	long double u_rotation = 0; // riadena velicina
+	long double w_rotation = 0;
+	long double Kp_rotation = 57;
+	long double e_rotation = 0;
+
+	x = 0;
+	y = 0;
+	theta = 0;
+
+	long i = 1;
+
+	while (fabs(x - w_translation) > 0.005 && x<w_translation) {
+		e_translation = w_translation - x;
+		u_translation = Kp_translation * e_translation;
+
+		e_rotation = w_rotation - theta;
+		if (!e_rotation == 0) u_rotation = Kp_rotation / e_rotation;
+		
+
+		// limit translation speed
+		if (u_translation > upper_thresh_translation) 
+			u_translation = upper_thresh_translation;
+		if (u_translation < lower_thresh_translation) 
+			u_translation = lower_thresh_translation;
+		
+		// rewrite starting speed with line
+		if (i < u_translation) {
+			u_translation = i;
+		}
+
+		if (fabs(u_rotation) > 32767) {
+			u_rotation = -32767;
+		}	
+
+		if (u_rotation == 0) {
+			u_rotation = -32767;
+		} 
+	
+		this->setArcSpeed(u_translation, u_rotation);
+
+		usleep(25*1000);
+		// increment starting speed
+		i = i + translation_start_gain;
+	}		
+	this->setTranslationSpeed(0);
+}
+
+
+
+/// metoda vykona rotaciu, rotuje sa pomocou regulatora, ako spatna vazba sluzi gyroskop,
+/// kedze je radovo presnejsi ako enkodery
+void CKobuki::doRotation(long double th) {
+         long double u = 0; // riadena velicina, uhlova rychlost robota pri pohybe
+         long double w = th; // pozadovana hodnota v radianoch
+         long double Kp = PI/4;
+         long double e = 0;
+         int thresh = PI/4;
+ 
+         theta = 0;
+         x = 0;
+         y = 0;
+	 	 gyroTheta = 0;
+ 
+         long double i = 0;
+ 
+         if (w > 0) {
+             while (gyroTheta < w) {
+                     e = w - gyroTheta;
+                     u = Kp*e;
+
+                     if (u > thresh) u = thresh;
+                     if (u < 0.4) u = 0.4;
+
+                     if (i < u) {
+                             u = i;
+                     }
+
+			 			std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
+                    this->setRotationSpeed(-1*u);
+                    usleep(25*1000);
+                    i = i + 0.1;
+             }
+         }
+         else  {
+              while (gyroTheta > w) {
+                      e = w - gyroTheta;
+                      u = Kp*e*-1;
+
+                      if (u > thresh) u = thresh;
+                      if (u < 0.4) u = 0.4;
+
+                      if (i < u) {
+                              u = i;
+                      }
+
+                      std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
+                      this->setRotationSpeed(u);
+                      usleep(25*1000);
+                      i = i + 0.1;
+              }
+          }
+
+		  std::cout << "stop the fuck!" << std::endl;
+          // usleep(25*1000);
+          this->setRotationSpeed(0);
+          usleep(25*1000);
+}
+
+
+// kombinuje navadzanie na suradnicu a rotaciu o uhol, realizuje presun na zvolenu suradnicu 
+// v suradnicovom systeme robota
+void CKobuki::goToXy(long double xx, long double yy) {
+	long double th;
+	
+	yy = yy*-1;
+	
+	th = atan2(yy,xx);
+	doRotation(th);
+
+	long double s = sqrt(pow(xx,2)+pow(yy,2));
+
+	// resetnem suradnicovu sustavu robota
+	x = 0;
+	y = 0;
+	iterationCount = 0;
+	theta = 0;	
+
+	//std::cout << "mam prejst: " << s << "[m]" << std::endl;
+	
+	goStraight(s);
+
+	usleep(25*1000);
+	return;
+}
+
