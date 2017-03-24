@@ -94,9 +94,10 @@ long demoCallback(void *user_data, TKobukiData &Kobuki_data) {
 	if (mLeft == mRight) {
 		x = x + mRight;
 	} else {
-		theta = (mRight-mLeft)/b + theta;
+		
 		x = x + (b*(mRight+mLeft))/(2*(mRight-mLeft))*(sin((mRight-mLeft)/b + theta) - sin(theta));
 		y = y + (b*(mRight+mLeft))/(2*(mRight-mLeft))*(cos((mRight-mLeft)/b + theta) - cos(theta));
+		theta = (mRight-mLeft)/b + theta;
 
 	}
 
@@ -226,15 +227,15 @@ void goToXy(CKobuki &robot,long double xx, long double yy) {
 void doGyroRotation(CKobuki &robot, long double th) {
 
          long double u = 0; // riadena velicina, uhlova rychlost robota pri pohybe
-         long double w = th; // pozadovana hodnota v uhloch
+         long double w = th; // pozadovana hodnota v radianoch
          long double Kp = PI/4;
          long double e = 0;
-         int thresh = PI;
+         int thresh = PI/4;
  
          theta = 0;
          x = 0;
          y = 0;
-	 gyroTheta = 0;
+	 	 gyroTheta = 0;
  
          long double i = 0;
  
@@ -251,12 +252,11 @@ void doGyroRotation(CKobuki &robot, long double th) {
                                  u = i;
                          }
 
- 			 std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
-                         robot.setRotationSpeed(-1*u);
-                         usleep(25*1000);
-                         i = i + 0.1;
+ 			 			std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
+                        robot.setRotationSpeed(-1*u);
+                        usleep(25*1000);
+                        i = i + 0.1;
                  }
-		 robot.setRotationSpeed(0);
          }
          else  {
                   while (gyroTheta > w) {
@@ -276,9 +276,14 @@ void doGyroRotation(CKobuki &robot, long double th) {
                           usleep(25*1000);
                           i = i + 0.1;
                   }
-                  robot.setRotationSpeed(0);
+
+                  
           }
 
+		  std::cout << "stop the fuck!" << std::endl;
+          // usleep(25*1000);
+          robot.setRotationSpeed(0);
+          usleep(25*1000);
 }
 
 
@@ -290,9 +295,9 @@ void doRotation(CKobuki &robot, long double th) {
         int thresh = PI;
 
         theta = 0;
-	x = 0;
-	y = 0;
-	gyroTheta = 0;
+		x = 0;
+		y = 0;
+		gyroTheta = 0;
 
         long double i = 0;
 
@@ -373,7 +378,7 @@ int main() {
 	unsigned char * null_ptr(0);
 	CKobuki robot;
 
-	robot.startCommunication("/dev/ttyUSB0", true, &demoCallback, null_ptr);
+	robot.startCommunication("/dev/cu.usbserial-kobuki_AI02MVQM", true, &demoCallback, null_ptr);
 	usleep(1*1000*1000);
 //	robot.setLed(1,1);
 
@@ -400,9 +405,9 @@ int main() {
 
 
 	// CCW ked je zaporne
-	//goStraight(robot,1);
-	doGyroRotation(robot,PI);
 	goStraight(robot,1);
+	// doGyroRotation(robot,-2*PI);
+	// goStraight(robot,1);
 	//doGyroRotation(robot,-PI/2);
 	//goStraight(robot,1);
 	//doGyroRotation(robot,-PI/2);
@@ -410,7 +415,7 @@ int main() {
 	//doGyroRotation(robot,-PI/2);
 
 
-//	rotateByTheta(robot, 2*-PI);
+	// rotateByTheta(robot, 2*PI);
 //	goToXy(robot,1,0);
 //	goToXy(robot,0,3);
 //	goToXy(robot,0,3);
@@ -419,5 +424,5 @@ int main() {
 
 	//goToXy(robot,0.3,0);
 	//rotateByTheta(robot, PI);
-
+	usleep(25*1000);
 }
