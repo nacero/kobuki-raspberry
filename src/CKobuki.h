@@ -13,6 +13,7 @@
 #ifndef KOBUKI_CLASS_123456789
 #define KOBUKI_CLASS_123456789
 #define PI          3.141592653589793238462643383279502884L /* pi */
+#define MS_INSTRUCTION_DELAY 25
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -24,6 +25,11 @@
 #include <math.h>
 #include <stdint.h>
 #include <iostream>
+#include <fstream>
+#include <cmath>
+#include <iomanip>
+#include <chrono>
+#include <sstream>
 
 typedef struct
 {
@@ -31,6 +37,7 @@ typedef struct
 	unsigned short x;
 	unsigned short y;
 	unsigned short z;
+
 }TRawGyroData;
 typedef struct
 {
@@ -113,11 +120,16 @@ typedef long(*src_callback_kobuki_data) (void *user_data, TKobukiData &Kobuki_da
 class CKobuki
 {
 public:
-	CKobuki() { stopVlakno = 0; };
+	CKobuki() { 
+		stopVlakno = 0; 
+		std::cout << "kobuki instantiated" << std::endl;
+  		odometry_log.open("odometry.txt");
+	};
 	 virtual ~CKobuki() { 
 		stopVlakno = 1; 
 	 	close(HCom);
 		pthread_cancel(threadHandle); 
+		odometry_log.close();
 	};
 	
 	void enableCommands(bool commands) {
@@ -136,12 +148,11 @@ public:
 	void setSound(int noteinHz, int duration);
 	void setPower(int value);
 
-
 	// control functions 
 	void goStraight(long double distance);
 	void doRotation(long double th);
 	void goToXy(long double xx, long double yy);
-
+	std::ofstream odometry_log;
 
 private:
 	int HCom;
@@ -179,14 +190,16 @@ private:
 
 	long double x = 0; // [m]
 	long double y = 0;
+
 	long double theta = 0; // [rad]
-	long double b = 0.23;
+	long double b = 0.23; // wheelbase distance in meters, from kobuki manual https://yujinrobot.github.io/kobuki/doxygen/enAppendixProtocolSpecification.html
 
 	long double prevGyroTheta = 0; 
 	long double gyroTheta = 0; // [rad]
 
 	// utilities
 	long double gyroToRad(signed short GyroAngle);
+
 
 };
 

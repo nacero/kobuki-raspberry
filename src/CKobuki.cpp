@@ -4,6 +4,8 @@
 #include <cstddef>
 #include <iostream>
 
+using namespace std::chrono;
+
 // obsluha tty pod unixom
 int set_interface_attribs2 (int fd, int speed, int parity)
 {
@@ -541,15 +543,115 @@ long CKobuki::loop(void *user_data, TKobukiData &Kobuki_data) {
 	directionL = (prevLeftEncoder < Kobuki_data.EncoderLeft ? 1 : -1);
 	directionR = (prevRightEncoder < Kobuki_data.EncoderRight ? 1 : -1);
 	dTimestamp = (Kobuki_data.timestamp < prevTimestamp ? prevTimestamp - Kobuki_data.timestamp + 65536 : dTimestamp);
-	
 
 	prevLeftEncoder = Kobuki_data.EncoderLeft;
 	prevRightEncoder = Kobuki_data.EncoderRight;
 	prevTimestamp = Kobuki_data.timestamp;
 	prevGyroTheta = gyroToRad(Kobuki_data.GyroAngle);
-	
 
-	std::cout << "X: " << x << " Y: " << y << " Theta: " << theta << std::endl; 
+	// get current timetamp in milliseconds
+    milliseconds ms = duration_cast< milliseconds >(
+        system_clock::now().time_since_epoch()
+    );
+    std::ostringstream mlss;
+    mlss << ms.count();
+    std::string milli_str = mlss.str();	
+
+
+    // tu treba doimplementovat integraciu polohy podla octave scriptu:
+    // 
+    // % read the transformations file to one big matrix
+	// file = dlmread("odometry.txt");
+
+
+
+	// tickToMeter = 0.000085292090497737556558; % [m/tick]
+
+	// x = 0;  % [m]
+	// y = 0;  % [m]
+
+	// gx = 0;
+	// gy = 0;
+
+	// theta = 0; % [rad]
+	// gyroTheta = 0;
+	// initialtheta = 0;
+	// b = 0.23; % wheelbase d [m]
+
+	// XX=[]
+	// YY=[]
+	// GXX=[]
+	// GYY=[]
+	// THETATHETA=[]
+	// GYROTHETA=[]
+
+	// for row_index = 1:1:size(file,1) 
+		
+	//     if row_index == 1
+	//       initialtheta = theta;  
+	//     end  
+	  
+
+	// 	  timestamp = file(row_index, 1);
+	//     gTheta = 0; %file(row_index, 4);
+
+	  
+	// 	  dLeft = file(row_index, 2);
+	// 	  dRight = file(row_index, 3);
+
+	//     mLeft = dLeft * tickToMeter;
+	//     mRight = dRight * tickToMeter;
+
+	  
+	//     displacement = (mRight + mLeft)/2;
+	//     rotation = (mLeft - mRight)/b; % or gTheta
+	        
+	// 		x = x + displacement * cos(theta + rotation / 2);
+	//   	y = y + displacement * sin(theta + rotation / 2);
+	//     theta = theta + rotation;
+
+
+	//     gyroTheta = gyroTheta + gTheta;
+	//     gx = gx + displacement * cos(gyroTheta + gTheta / 2);
+	//     gy = gy + displacement * sin(gyroTheta + gTheta / 2);
+	//     GXX(end + 1) = gx;
+	//     GYY(end + 1) = gy;
+	    
+	  
+	    
+	// 		XX(end + 1) = x;
+	//     YY(end +1) = y;
+	//     THETATHETA(end + 1) = theta;    
+	//     GYROTHETA(end + 1) = gyroTheta;
+	    
+	    
+	// end    
+
+
+
+	// plot(THETATHETA,"b")
+
+	// hold on
+
+	// %plot(GYROTHETA,"r.")
+
+	// print -djpg theta
+
+	// figure 2
+	// axis equal
+	// plot(XX,YY,"b")
+	// print -djpg trajectory
+	// hold on
+	// %plot(GXX,GYY,"r.")
+    // 
+    // 
+
+
+
+
+
+    // toto treba prerobit na zapis do shared pointera ktory sa sem dostane cez konstruktor robota ako RobotPosition
+	odometry_log  << std::setprecision(5) << std::fixed << milli_str << " " << dLeft << " " << dRight << " " << dGyroTheta << std::endl; 
 
 	return 0;
 }
@@ -557,18 +659,19 @@ long CKobuki::loop(void *user_data, TKobukiData &Kobuki_data) {
 
 
 
-// povie kobukimu ze ma ist niekolko metrov dopredu alebo dozadu, rozhoduje znamienko
+// povie kobukimu ze ma ist niekolko metrov dopredu, neda sa cuvat!!!
 // funkcia kompenzuje chodenie rovno pomocou regulatora, interne vyuziva setArcSpeed a 
 // ako spatnu vazbu pouziva data z enkoderov
 void CKobuki::goStraight(long double distance){
+	odometry_log << "STRAIGHT: " << distance << std::endl;  
 	long double u_translation = 0; // riadena velicina, rychlost robota pri pohybe
 	long double w_translation = distance; // pozadovana hodnota
 	
 	// parametre regulatora
-	long double Kp_translation = 1600; 
+	long double Kp_translation = 5000; 
 	long double e_translation = 0;	
-	int upper_thresh_translation = 500;
-	int lower_thresh_translation = 40;
+	int upper_thresh_translation = 700;
+	int lower_thresh_translation = 80;
 	int translation_start_gain = 20;
 
 	long double u_rotation = 0; // riadena velicina
@@ -611,11 +714,12 @@ void CKobuki::goStraight(long double distance){
 	
 		this->setArcSpeed(u_translation, u_rotation);
 
-		usleep(25*1000);
+		usleep(MS_INSTRUCTION_DELAY*1000);
 		// increment starting speed
 		i = i + translation_start_gain;
 	}		
 	this->setTranslationSpeed(0);
+	usleep(MS_INSTRUCTION_DELAY*1000);
 }
 
 
@@ -623,60 +727,82 @@ void CKobuki::goStraight(long double distance){
 /// metoda vykona rotaciu, rotuje sa pomocou regulatora, ako spatna vazba sluzi gyroskop,
 /// kedze je radovo presnejsi ako enkodery
 void CKobuki::doRotation(long double th) {
-         long double u = 0; // riadena velicina, uhlova rychlost robota pri pohybe
-         long double w = th; // pozadovana hodnota v radianoch
-         long double Kp = PI/4;
-         long double e = 0;
-         int thresh = PI/4;
- 
-         theta = 0;
-         x = 0;
-         y = 0;
-	 	 gyroTheta = 0;
- 
-         long double i = 0;
- 
-         if (w > 0) {
-             while (gyroTheta < w) {
-                     e = w - gyroTheta;
-                     u = Kp*e;
 
-                     if (u > thresh) u = thresh;
-                     if (u < 0.4) u = 0.4;
+	//std::cout << "TEST" << std::endl;
 
-                     if (i < u) {
-                             u = i;
-                     }
+	 // odometry_log << "ROTATE: " << th << std::endl;
+     long double u = 0; // riadena velicina, uhlova rychlost robota pri pohybe
+     long double w = th; // pozadovana hodnota v radianoch
+     long double Kp = PI*2;
+     long double e = 0;
+     int thresh = PI/2;
 
-			 			std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
-                    this->setRotationSpeed(-1*u);
-                    usleep(25*1000);
-                    i = i + 0.1;
-             }
+     theta = 0;
+     x = 0;
+     y = 0;
+ 	 gyroTheta = 0;
+
+     long double i = 0;
+
+     if (w > 0) {
+         while (gyroTheta < w) {
+                 e = w - gyroTheta;
+                 u = Kp*e;
+
+                 std::cout << "Rozdiel aktualna a pozadovana: " << fabs(e) << " rychlost otacania: " << u  << std::endl;
+
+                 if (u > thresh) u = thresh;
+                 if (u < 0.1) u = 0.1;
+
+                 if (i < u) {
+                         u = i;
+                 }
+
+                 if (fabs(gyroTheta - w) < 0.09) break;
+
+                 
+
+		 			// std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
+                this->setRotationSpeed(-1*u);
+                usleep(MS_INSTRUCTION_DELAY*1000);
+                i = i + 0.1;
          }
-         else  {
-              while (gyroTheta > w) {
-                      e = w - gyroTheta;
-                      u = Kp*e*-1;
+     }
+     else  {
+          while (gyroTheta > w) {
+                  e = w - gyroTheta;
+                  u = Kp*e*-1;
 
-                      if (u > thresh) u = thresh;
-                      if (u < 0.4) u = 0.4;
+                  std::cout << "Rozdiel aktualna a pozadovana: " << fabs(e) << " rychlost otacania: " << u  << std::endl;
 
-                      if (i < u) {
-                              u = i;
-                      }
 
-                      std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
-                      this->setRotationSpeed(u);
-                      usleep(25*1000);
-                      i = i + 0.1;
-              }
+                  if (u > thresh) u = thresh;
+                  if (u < 0.1) u = 0.1;
+
+                  if (i < u) {
+                          u = i;
+                  }
+
+                  if (fabs(gyroTheta - w) < 0.09) break;
+
+
+                  // std::cout << (gyroTheta - w) << std::endl;
+
+                  // std::cout << "Angle: " << gyroTheta << " required:" << w << std::endl;
+                  this->setRotationSpeed(u);
+                  usleep(MS_INSTRUCTION_DELAY*1000);
+                  i = i + 0.1;
           }
+      }
 
-		  std::cout << "stop the fuck!" << std::endl;
-          // usleep(25*1000);
-          this->setRotationSpeed(0);
-          usleep(25*1000);
+      
+
+      this->setRotationSpeed(0);
+      usleep(MS_INSTRUCTION_DELAY*1000);
+	  // odometry_log << "STOP" << std::endl;
+
+      
+      
 }
 
 
@@ -702,7 +828,9 @@ void CKobuki::goToXy(long double xx, long double yy) {
 	
 	goStraight(s);
 
-	usleep(25*1000);
+	usleep(MS_INSTRUCTION_DELAY*1000);
 	return;
 }
+
+
 
