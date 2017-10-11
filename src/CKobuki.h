@@ -158,6 +158,9 @@ public:
 	void goToXy(long double xx, long double yy);
 	std::ofstream odometry_log;
 
+
+
+
 private:
 	int HCom;
 	pthread_t threadHandle; // handle na vlakno
@@ -191,23 +194,29 @@ private:
 	int directionR = 0;
 	int iterationCount = 0;
 	long double tickToMeter = 0.000085292090497737556558; // [m/tick]
-
+//
 	long double x = 0; // [m]
 	long double y = 0;
-
+//
 	long double theta = 0; // [rad]
 	long double b = 0.23; // wheelbase distance in meters, from kobuki manual https://yujinrobot.github.io/kobuki/doxygen/enAppendixProtocolSpecification.html
-
-	long double prevGyroTheta = 0; 
+//
+	long double prevGyroTheta = 0;
 	long double gyroTheta = 0; // [rad]
 
 	// utilities
 	long double gyroToRad(signed short GyroAngle);
 
-    private:
-        static std::vector<int> vectorX;
-        static std::vector<int> vectorY;
-        plot p;
+    plot p;
+    std::vector<float> vectorX;
+    std::vector<float> vectorY;
+    std::vector<float> vectorGyroTheta;
+
+
+    double displacement = 0;
+    double integratedGyroTheta = 0;
+    double gx = 0;
+    double gy = 0;
 
 
 };
