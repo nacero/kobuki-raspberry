@@ -2,11 +2,23 @@
 #include <iostream>
 #include <cmath>
 
+#include "graph.h"
+
+using namespace std;
 
 int main() {
 	unsigned char * null_ptr(0);
 	CKobuki robot;
 
+    plot p;
+    for(int a=0;a<100;a++) {
+        vector<float> x, y;
+        for (int k = a; k < a + 200; k++) {
+            x.push_back(k);
+            y.push_back(k * k);
+        }
+        p.plot_data(x, y);
+    }
 
 // tu treba doimplementovat shared pointer na data z robota RobotPosition, ktore by mali byt nasledovny struct:
 // {
@@ -57,17 +69,64 @@ int main() {
 	// robot.goStraight(3);
 
 	robot.goStraight(0.5);
-	robot.doRotation(PI/2);
-
+	robot.doRotation(PI);
+	
 	robot.goStraight(0.5);
-	robot.doRotation(PI/2);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI/2);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI/2);
-
+	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(PI);
+//
+//	robot.goStraight(0.5);
+//	robot.doRotation(-PI);
 
 
 	// robot.goStraight(3);

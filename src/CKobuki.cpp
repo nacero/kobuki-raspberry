@@ -759,7 +759,7 @@ void CKobuki::doRotation(long double th) {
                  e = w - gyroTheta;
                  u = Kp*e;
 
-                 std::cout << "Rozdiel aktualna a pozadovana: " << fabs(e) << " rychlost otacania: " << u  << std::endl;
+//                 std::cout << "Rozdiel aktualna a pozadovana: " << fabs(e) << " rychlost otacania: " << u  << std::endl;
 
                  if (u > thresh) u = thresh;
                  if (u < 0.1) u = 0.1;
@@ -783,7 +783,7 @@ void CKobuki::doRotation(long double th) {
                   e = w - gyroTheta;
                   u = Kp*e*-1;
 
-                  std::cout << "Rozdiel aktualna a pozadovana: " << fabs(e) << " rychlost otacania: " << u  << std::endl;
+//                  std::cout << "Rozdiel aktualna a pozadovana: " << fabs(e) << " rychlost otacania: " << u  << std::endl;
 
 
                   if (u > thresh) u = thresh;

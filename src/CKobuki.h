@@ -31,6 +31,10 @@
 #include <chrono>
 #include <sstream>
 
+#include "graph.h"
+
+using namespace std;
+
 typedef struct
 {
 	
@@ -199,6 +203,11 @@ private:
 
 	// utilities
 	long double gyroToRad(signed short GyroAngle);
+
+    private:
+        static std::vector<int> vectorX;
+        static std::vector<int> vectorY;
+        plot p;
 
 
 };
