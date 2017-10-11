@@ -558,25 +558,26 @@ long CKobuki::loop(void *user_data, TKobukiData &Kobuki_data) {
     std::string milli_str = mlss.str();	
 
 
-    // tu treba doimplementovat integraciu polohy podla octave scriptu:
-    // 
-    // % read the transformations file to one big matrix
-	// file = dlmread("odometry.txt");
 
 
 
-	// tickToMeter = 0.000085292090497737556558; % [m/tick]
 
-	// x = 0;  % [m]
-	// y = 0;  % [m]
+    
 
-	// gx = 0;
-	// gy = 0;
 
-	// theta = 0; % [rad]
-	// gyroTheta = 0;
-	// initialtheta = 0;
-	// b = 0.23; % wheelbase d [m]
+
+	double tickToMeter = 0.000085292090497737556558; // [m/tick]
+
+	double static x = 0;  // [m]
+	double static y = 0;  // [m]
+
+	double static gx = 0;
+	double static gy = 0;
+
+	double static theta = 0; // [rad]
+	double static gyroTheta = 0;
+	double initialtheta = 0;
+	double b = 0.23; // wheelbase d [m]
 
 	// XX=[]
 	// YY=[]
@@ -599,21 +600,21 @@ long CKobuki::loop(void *user_data, TKobukiData &Kobuki_data) {
 	// 	  dLeft = file(row_index, 2);
 	// 	  dRight = file(row_index, 3);
 
-	//     mLeft = dLeft * tickToMeter;
-	//     mRight = dRight * tickToMeter;
+	    double nLeft = dLeft * tickToMeter;
+	    double nRight = dRight * tickToMeter;
 
 	  
-	//     displacement = (mRight + mLeft)/2;
-	//     rotation = (mLeft - mRight)/b; % or gTheta
-	        
-	// 		x = x + displacement * cos(theta + rotation / 2);
-	//   	y = y + displacement * sin(theta + rotation / 2);
-	//     theta = theta + rotation;
+	    double displacement = (nRight + nLeft)/2;
+	    double rotation = (nLeft - nRight)/b; // or gTheta
+	    
+	    theta = theta + rotation;    
+		x = x + displacement * cos(theta + rotation / 2);
+	  	y = y + displacement * sin(theta + rotation / 2);
+	   
 
-
-	//     gyroTheta = gyroTheta + gTheta;
-	//     gx = gx + displacement * cos(gyroTheta + gTheta / 2);
-	//     gy = gy + displacement * sin(gyroTheta + gTheta / 2);
+	    gyroTheta = gyroTheta + dGyroTheta;
+	    gx = gx + displacement * cos(gyroTheta + dGyroTheta / 2);
+	    gy = gy + displacement * sin(gyroTheta + dGyroTheta / 2);
 	//     GXX(end + 1) = gx;
 	//     GYY(end + 1) = gy;
 	    
@@ -628,6 +629,15 @@ long CKobuki::loop(void *user_data, TKobukiData &Kobuki_data) {
 	// end    
 
 
+	    
+	    system("clear");
+	    std::cout << x << std::endl;
+	    std::cout << y << std::endl;
+	    std::cout << gyroTheta << std::endl;
+	    std::cout << theta << std::endl;
+
+// toto treba prerobit na zapis do shared pointera ktory sa sem dostane cez konstruktor robota ako RobotPosition
+	odometry_log  << std::setprecision(5) << std::fixed << milli_str << " " << x << " " << y << " " << gyroTheta << std::endl; 
 
 	// plot(THETATHETA,"b")
 

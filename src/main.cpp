@@ -57,64 +57,17 @@ int main() {
 	// robot.goStraight(3);
 
 	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
+	robot.doRotation(PI/2);
 
 	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
+	robot.doRotation(PI/2);
 
 	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
+	robot.doRotation(PI/2);
 
 	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
+	robot.doRotation(PI/2);
 
-	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
-
-	robot.goStraight(0.5);
-	robot.doRotation(PI);
-	
-	robot.goStraight(0.5);
-	robot.doRotation(-PI);
 
 
 	// robot.goStraight(3);
